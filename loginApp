@@ -2,6 +2,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 import sys
 import sqlite3
+from PyQt5.QtCore import Qt
 #create the login widget class - each window must have a class
 ...
 class Ui(QtWidgets.QMainWindow):
@@ -9,7 +10,7 @@ class Ui(QtWidgets.QMainWindow):
     def __init__(self):
         super(Ui, self).__init__()
         uic.loadUi("login.ui", self)
-
+        self.attempts_remaining = 3
         #add event listeners
         self.btnLogin.clicked.connect(self.loginMethod)
         self.btnClear.clicked.connect(self.clearMethod)
@@ -30,10 +31,16 @@ class Ui(QtWidgets.QMainWindow):
             try:
                 if data[0][0] == enteredPassword:
                     messageBoxHandler('Success', 'Successfully logged in')
-                    self.close
+                    self.close()
                     #this is where code for opening another window would come in
                 else:
-                    messageBoxHandler('Login attempt failed','incorrect username or password', 'warning')
+                    self.attempts_remaining -=1
+                    if self.attempts_remaining == 0:
+                        messageBoxHandler('Login failed', 'Maximum attempts reached. Window closing...', 'warning')
+                        self.close()
+                    else:
+                        messageBoxHandler('Login attempt failed','incorrect username or password', 'warning')
+                    
             except:
                 messageBoxHandler('Login attempt failed','try again', 'warning')
             #print(f'username: {enteredUsername} | Password: {enteredPassword}')
@@ -42,6 +49,34 @@ class Ui(QtWidgets.QMainWindow):
         '''resets the form fields'''
         self.userNameInput.setText("")
         self.passwordInput.setText("")
+
+    def keyPressEvent(self, e):
+        '''This method handles keyboard button events'''
+        if e.key() == Qt.Key_Escape:
+            self.close()
+        elif e.key() == Qt.Key_Return:
+            self.loginMethod()
+
+class VideoUi(QtWidgets.QMainWindow):
+    '''Class to handle the display of the videos list'''
+    def __init__(self):
+        super(VideoUi, self).__init__()
+        uic.loadUi("VideoGui.ui", self)
+
+        #event listeners go here
+
+        #show the window
+        self.show()
+        self.populate_video_data()
+
+    def populate_video_data(self):
+        '''Query data from database and display it on the video form'''
+        query = "SELECT Title,Studio, ReleaseDate,Classification FROM tblFilm"
+        data = executeStatementHelper(query)
+        print(data)
+
+
+
 
 def messageBoxHandler(title, message, iconType="info"):
     '''This will display a dialog message'''
@@ -67,6 +102,7 @@ def dbConnector():
 def executeStatementHelper(query,args=None):
     '''connects and executes a given query returning the data'''
     conn, cur = dbConnector()
+    print (conn, cur)
     if not args:
         cur.execute(query)
     else:
@@ -80,11 +116,14 @@ def executeStatementHelper(query,args=None):
 def mainApplication():
     '''Main application will load the window instance'''
     app = QtWidgets.QApplication(sys.argv)
-    window = Ui()
+    #window = Ui()
+    #window.show()
+    window =VideoUi()
     window.show()
     sys.exit(app.exec_())
 
 #print(dbConnector())
 mainApplication()
-
+#query = "SELECT Title,Studio, ReleaseDate,Classification FROM tblFilm"
+#print(executeStatementHelper(query))
 #print('test')
